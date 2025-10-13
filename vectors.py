@@ -1,7 +1,12 @@
+import math
 from typing import Sequence
 
 import numpy as np
 from scipy import sparse
+
+
+DIM_POSITIVE_INT_ERROR = ValueError("Dim must be a positive integer")
+SHAPE_MISMATCH_ERROR = ValueError("Shape mismatch")
 
 
 def get_vector(dim: int) -> np.ndarray:
@@ -13,7 +18,9 @@ def get_vector(dim: int) -> np.ndarray:
     Returns:
         np.ndarray: column vector.
     """
-    raise NotImplementedError
+    if dim <= 0:
+        raise DIM_POSITIVE_INT_ERROR
+    return np.random.randn(dim, 1)
 
 
 def get_sparse_vector(dim: int) -> sparse.coo_matrix:
@@ -25,7 +32,13 @@ def get_sparse_vector(dim: int) -> sparse.coo_matrix:
     Returns:
         sparse.coo_matrix: sparse column vector.
     """
-    raise NotImplementedError
+    if dim <= 0:
+        raise DIM_POSITIVE_INT_ERROR
+
+    return sparse.random(
+        dim,
+        1,
+    )
 
 
 def add(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -38,7 +51,12 @@ def add(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: vector sum.
     """
-    raise NotImplementedError
+    x = np.asarray(x).reshape(-1, 1)
+    y = np.asarray(y).reshape(-1, 1)
+
+    if x.shape != y.shape:
+        raise SHAPE_MISMATCH_ERROR
+    return x + y
 
 
 def scalar_multiplication(x: np.ndarray, a: float) -> np.ndarray:
@@ -51,7 +69,8 @@ def scalar_multiplication(x: np.ndarray, a: float) -> np.ndarray:
     Returns:
         np.ndarray: multiplied vector.
     """
-    raise NotImplementedError
+    x = np.asarray(x).reshape(-1, 1)
+    return a * x
 
 
 def linear_combination(vectors: Sequence[np.ndarray], coeffs: Sequence[float]) -> np.ndarray:
@@ -64,7 +83,22 @@ def linear_combination(vectors: Sequence[np.ndarray], coeffs: Sequence[float]) -
     Returns:
         np.ndarray: linear combination of vectors.
     """
-    raise NotImplementedError
+    if len(vectors) == 0:
+        raise ValueError("Vectors must be a non-empty Sequence")
+
+    if len(vectors) != len(coeffs):
+        raise ValueError("Vectors and Coeffs must have the same length")
+
+    cols = [np.asarray(v).reshape(-1, 1) for v in vectors]
+    first_shape = cols[0].shape
+
+    if any(c.shape != first_shape for c in cols[1:]):
+        raise SHAPE_MISMATCH_ERROR
+
+    result = np.zeros_like(cols[0], dtype=float)
+    for v, a in zip(cols, coeffs):
+        result += a * v
+    return result
 
 
 def dot_product(x: np.ndarray, y: np.ndarray) -> float:
@@ -77,7 +111,12 @@ def dot_product(x: np.ndarray, y: np.ndarray) -> float:
     Returns:
         float: dot product.
     """
-    raise NotImplementedError
+    x = np.asarray(x).ravel()
+    y = np.asarray(y).ravel()
+    if x.shape != y.shape:
+        raise SHAPE_MISMATCH_ERROR
+
+    return float(np.dot(x, y))
 
 
 def norm(x: np.ndarray, order: int | float) -> float:
@@ -90,7 +129,12 @@ def norm(x: np.ndarray, order: int | float) -> float:
     Returns:
         float: vector norm
     """
-    raise NotImplementedError
+    x = np.asarray(x).ravel()
+
+    if order not in (1, 2, np.inf) and not (isinstance(order, float) and math.isinf(order)):
+        raise ValueError("order must be 1, 2, or inf")
+
+    return float(np.linalg.norm(x, ord=order))
 
 
 def distance(x: np.ndarray, y: np.ndarray) -> float:
@@ -103,7 +147,12 @@ def distance(x: np.ndarray, y: np.ndarray) -> float:
     Returns:
         float: distance.
     """
-    raise NotImplementedError
+    x = np.asarray(x).ravel()
+    y = np.asarray(y).ravel()
+    if x.shape != y.shape:
+        raise SHAPE_MISMATCH_ERROR
+
+    return float(np.linalg.norm(x - y))
 
 
 def cos_between_vectors(x: np.ndarray, y: np.ndarray) -> float:
@@ -117,7 +166,21 @@ def cos_between_vectors(x: np.ndarray, y: np.ndarray) -> float:
     Returns:
         np.ndarray: angle in deg.
     """
-    raise NotImplementedError
+    x = np.asarray(x).ravel()
+    y = np.asarray(y).ravel()
+    if x.shape != y.shape:
+        raise SHAPE_MISMATCH_ERROR
+
+    nx = np.linalg.norm(x)
+    ny = np.linalg.norm(y)
+    if nx == 0.0 or ny == 0.0:
+        raise ValueError("angle is undefined for zero vector(s)")
+
+    cos_theta = float(np.dot(x, y) / (nx * ny))
+    # Numerical safety: clamp into [-1, 1]
+    cos_theta = max(-1.0, min(1.0, cos_theta))
+    theta_rad = math.acos(cos_theta)
+    return math.degrees(theta_rad)
 
 
 def is_orthogonal(x: np.ndarray, y: np.ndarray) -> bool:
@@ -131,7 +194,8 @@ def is_orthogonal(x: np.ndarray, y: np.ndarray) -> bool:
     Returns:
         bool: are vectors orthogonal.
     """
-    raise NotImplementedError
+    dp = dot_product(x, y)
+    return math.isclose(dp, 0.0, abs_tol=1e-12)
 
 
 def solves_linear_systems(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -144,4 +208,21 @@ def solves_linear_systems(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: sytems solution
     """
-    raise NotImplementedError
+    a = np.asarray(a)
+    b = np.asarray(b)
+
+    if a.ndim != 2:
+        raise ValueError("a must be a 2D array (matrix)")
+    if a.shape[0] != b.shape[0]:
+        raise SHAPE_MISMATCH_ERROR
+
+    # Prefer exact solve for square systems; otherwise use least squares.
+    if a.shape[0] == a.shape[1]:
+        x = np.linalg.solve(a, b)
+    else:
+        x, *_ = np.linalg.lstsq(a, b, rcond=None)
+
+    # Ensure column vector shape if b was 1D/column-like
+    if x.ndim == 1:
+        x = x.reshape(-1, 1)
+    return x
