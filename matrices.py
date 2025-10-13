@@ -1,4 +1,12 @@
+import math
+
 import numpy as np
+
+from vectors import SHAPE_MISMATCH_ERROR, DIM_POSITIVE_INT_ERROR
+
+
+POSITIVE_VALUES_ERROR = ValueError("Values must be positive integers")
+MATRIX_DIMENSION_ERROR = ValueError("Matrix must be 2D")
 
 
 def get_matrix(n: int, m: int) -> np.ndarray:
@@ -11,7 +19,10 @@ def get_matrix(n: int, m: int) -> np.ndarray:
     Returns:
         np.ndarray: matrix n*m.
     """
-    raise NotImplementedError
+    if n <= 0 or m <= 0:
+        raise POSITIVE_VALUES_ERROR
+
+    return np.random.randn(n, m)
 
 
 def add(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -24,7 +35,11 @@ def add(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: matrix sum.
     """
-    raise NotImplementedError
+    x = np.asarray(x)
+    y = np.asarray(y)
+    if x.shape != y.shape:
+        raise SHAPE_MISMATCH_ERROR
+    return x + y
 
 
 def scalar_multiplication(x: np.ndarray, a: float) -> np.ndarray:
@@ -37,7 +52,7 @@ def scalar_multiplication(x: np.ndarray, a: float) -> np.ndarray:
     Returns:
         np.ndarray: multiplied matrix.
     """
-    raise NotImplementedError
+    return np.asarray(x) * a
 
 
 def dot_product(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -50,7 +65,13 @@ def dot_product(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: dot product.
     """
-    raise NotImplementedError
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    try:
+        return x @ y
+    except ValueError:
+        raise SHAPE_MISMATCH_ERROR
 
 
 def identity_matrix(dim: int) -> np.ndarray:
@@ -62,7 +83,10 @@ def identity_matrix(dim: int) -> np.ndarray:
     Returns:
         np.ndarray: identity matrix.
     """
-    raise NotImplementedError
+    if dim <= 0:
+        raise DIM_POSITIVE_INT_ERROR
+
+    return np.eye(dim, dtype=float)
 
 
 def matrix_inverse(x: np.ndarray) -> np.ndarray:
@@ -74,7 +98,12 @@ def matrix_inverse(x: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: inverse matrix.
     """
-    raise NotImplementedError
+    x = np.asarray(x, dtype=float)
+
+    if x.ndim != 2 or x.shape[0] != x.shape[1]:
+        raise SHAPE_MISMATCH_ERROR
+
+    return np.linalg.inv(x)
 
 
 def matrix_transpose(x: np.ndarray) -> np.ndarray:
@@ -86,7 +115,7 @@ def matrix_transpose(x: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: transosed matrix.
     """
-    raise NotImplementedError
+    return np.asarray(x).T
 
 
 def hadamard_product(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -99,7 +128,11 @@ def hadamard_product(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: hadamard produc
     """
-    raise NotImplementedError
+    x = np.asarray(x)
+    y = np.asarray(y)
+    if x.shape != y.shape:
+        raise SHAPE_MISMATCH_ERROR
+    return x * y
 
 
 def basis(x: np.ndarray) -> tuple[int]:
@@ -111,7 +144,34 @@ def basis(x: np.ndarray) -> tuple[int]:
     Returns:
         tuple[int]: indexes of basis columns.
     """
-    raise NotImplementedError
+    A = np.asarray(x, dtype=float)
+
+    if A.ndim != 2:
+        raise MATRIX_DIMENSION_ERROR
+
+    n, m = A.shape
+    if m == 0 or n == 0:
+        return tuple()
+
+    selected: list[int] = []
+    if m == 1:
+        return (0,) if np.linalg.norm(A[:, 0]) > 0 else tuple()
+
+    B = np.zeros((n, 0), dtype=float)
+    rank_B = 0
+
+    for j in range(m):
+        candidate = np.hstack([B, A[:, [j]]])
+        new_rank = np.linalg.matrix_rank(candidate)
+
+        if new_rank > rank_B:
+            selected.append(j)
+            B = candidate
+            rank_B = new_rank
+            if rank_B == min(n, m):
+                break
+
+    return tuple(selected)
 
 
 def norm(x: np.ndarray, order: int | float | str) -> float:
@@ -124,4 +184,18 @@ def norm(x: np.ndarray, order: int | float | str) -> float:
     Returns:
         float: vector norm
     """
-    raise NotImplementedError
+    X = np.asarray(x, dtype=float)
+
+    if X.ndim != 2:
+        raise MATRIX_DIMENSION_ERROR
+
+    if order == 'fro':
+        return float(np.linalg.norm(X, ord='fro'))
+
+    if order == 2:
+        return float(np.linalg.norm(X, ord=2))
+
+    if order == np.inf or (isinstance(order, float) and math.isinf(order)):
+        return float(np.linalg.norm(X, ord=np.inf))
+
+    raise ValueError("order must be 'fro', 2, or inf")
