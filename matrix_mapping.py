@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from vectors import SHAPE_MISMATCH_ERROR, DIM_POSITIVE_INT_ERROR
+from vectors import SHAPE_MISMATCH_ERROR
 
 
 def negative_matrix(x: np.ndarray) -> np.ndarray:

@@ -1,5 +1,9 @@
 import numpy as np
 
+from scipy.linalg import lu
+
+from vectors import SHAPE_MISMATCH_ERROR
+
 
 def lu_decomposition(x: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -12,7 +16,13 @@ def lu_decomposition(x: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]
         tuple[np.ndarray, np.ndarray, np.ndarray]:
             The permutation matrix P, lower triangular matrix L, and upper triangular matrix U.
     """
-    raise NotImplementedError
+    X = np.asarray(x, dtype=float)
+
+    if X.ndim != 2:
+        raise SHAPE_MISMATCH_ERROR
+
+    P, L, U = lu(X)
+    return P, L, U
 
 
 def qr_decomposition(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -25,7 +35,13 @@ def qr_decomposition(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     Returns:
         tuple[np.ndarray, np.ndarray]: The orthogonal matrix Q and upper triangular matrix R.
     """
-    raise NotImplementedError
+    X = np.asarray(x, dtype=float)
+
+    if X.ndim != 2:
+        raise SHAPE_MISMATCH_ERROR
+
+    Q, R = np.linalg.qr(X, mode="reduced")
+    return Q, R
 
 
 def determinant(x: np.ndarray) -> np.ndarray:
@@ -38,7 +54,12 @@ def determinant(x: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: The determinant of the matrix.
     """
-    raise NotImplementedError
+    X = np.asarray(x, dtype=float)
+
+    if X.ndim != 2 or X.shape[0] != X.shape[1]:
+        raise SHAPE_MISMATCH_ERROR
+
+    return float(np.linalg.det(X))
 
 
 def eigen(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -51,7 +72,13 @@ def eigen(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     Returns:
         tuple[np.ndarray, np.ndarray]: The eigenvalues and the right eigenvectors of the matrix.
     """
-    raise NotImplementedError
+    X = np.asarray(x, dtype=float)
+
+    if X.ndim != 2 or X.shape[0] != X.shape[1]:
+        raise SHAPE_MISMATCH_ERROR
+
+    w, V = np.linalg.eig(X)
+    return w, V
 
 
 def svd(x: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -64,4 +91,11 @@ def svd(x: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     Returns:
         tuple[np.ndarray, np.ndarray, np.ndarray]: The matrices U, S, and V.
     """
-    raise NotImplementedError
+    X = np.asarray(x, dtype=float)
+
+    if X.ndim != 2:
+        raise SHAPE_MISMATCH_ERROR
+
+    U, S, Vh = np.linalg.svd(X, full_matrices=False)
+    V = Vh.T
+    return U, S, V
